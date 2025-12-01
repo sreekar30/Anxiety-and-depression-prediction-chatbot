@@ -34,16 +34,15 @@ const AboutSection: React.FC = () => {
             <div className="h-0.5 w-16 bg-sky-400/80 rounded-full" />
           </div>
           <p className="text-slate-200/90 mb-3 text-sm md:text-base">
-            Anxiety is a common mental health experience that involves excessive
-            worry, fear, or nervousness. It can affect how we feel, think, and
-            behave, and may show up as restlessness, difficulty concentrating,
-            irritability, or physical symptoms such as a racing heart or trouble
-            sleeping.
+          Anxiety is a newly rising mental health condition that results in 
+          excessive worry, fear or uneasiness. It may come as irritation, 
+          difficulty focusing, restlessness or it may even have physical symptoms like  difficulty sleeping 
+          or beating heart. It can also have an impact on how we appear, think and behave.
           </p>
           <p className="text-slate-200/90 text-sm md:text-base">
-            Everyone feels anxious sometimes, but when these feelings are
-            intense, long-lasting, or interfere with daily life, it may be a
-            sign of an anxiety disorder.
+          Everyone will experience such cases occasionally, but if these sensations 
+          are persistent, severe or interfere with day-to-day activities, 
+          they may indicate an anxiety disorder.
           </p>
         </div>
 
@@ -56,10 +55,7 @@ const AboutSection: React.FC = () => {
             <div className="h-0.5 w-16 bg-violet-400/80 rounded-full" />
           </div>
           <p className="text-slate-200/90 mb-3 text-sm md:text-base">
-            Depression is more than feeling sad. It can involve a persistent low
-            mood, loss of interest in activities, changes in sleep or appetite,
-            and feelings of hopelessness or worthlessness. These experiences can
-            make everyday tasks feel exhausting or meaningless.
+          Depression is not just sadness, it is more than that. Negative feelings like hopelessness or worthlessness, changes in sleep or eat timings, an extended low mood, and a lack of interest in activities are a few of the symptoms. Daily duties may seem useless or tiring as a result of these experiences.
           </p>
           <p className="text-slate-200/90 text-sm md:text-base">
             With the right support and treatment, people can recover and manage

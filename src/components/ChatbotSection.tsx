@@ -1272,12 +1272,7 @@ return (
             Mental Health Chatbot
           </h2>
           <p className="text-slate-700 text-sm md:text-base">
-            This chatbot walks you through a short questionnaire and then
-            explains a depression/anxiety prediction from your model. It is{" "}
-            <span className="font-semibold">
-              not a substitute for professional care or crisis support
-            </span>
-            . Avoid sharing sensitive personal information.
+          This chatbot guides you through a short questionnaire, followed by a depression/anxiety prediction based on your responses. It is not a complete replacement for professional care or support. 
           </p>
         </div>
         <button
@@ -1449,8 +1444,7 @@ return (
       </div>
 
       <p className="text-xs text-slate-600 mt-3">
-        If you are in immediate distress or thinking about self-harm, please
-        contact local emergency services or a crisis hotline in your area.
+      Please call your local emergency services or an urgent helpline if you are experiencing immediate anxiety or are considering self-harm.
       </p>
     </section>
   );

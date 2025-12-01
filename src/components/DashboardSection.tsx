@@ -41,9 +41,7 @@ const DashboardSection: React.FC = () => {
           Interactive Prediction Dashboard
         </h2>
         <p className="text-slate-700 max-w-2xl mx-auto text-sm md:text-base">
-          These visualizations show model-based patterns related to anxiety and
-          depression. Use the filters inside each chart to explore how the
-          curves change across different groups or conditions.
+        These illustrations demonstrate model-based trends associated with depression and anxiety. Make use of filters which are inside each chart to see how curves vary among various groups or circumstances.
         </p>
       </div>
 
@@ -63,10 +61,10 @@ const DashboardSection: React.FC = () => {
             <div className="bg-slate-950/80 border border-sky-700/60 rounded-2xl shadow-xl shadow-sky-900/80 overflow-hidden flex flex-col backdrop-blur-xl">
               <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-col items-center text-center gap-1">
                 <h3 className="text-sm font-semibold text-slate-50">
-                  Anxiety Visualization
+                Trend of Dep/Anx by Feature
                 </h3>
                 <p className="text-xs text-slate-200">
-                  Explore predicted anxiety levels across different filters.
+                  Explore trends of anxiety or depression levels across different filters.
                 </p>
               </div>
               <div className="w-full h-[520px] bg-slate-900 overflow-hidden">
@@ -86,10 +84,10 @@ const DashboardSection: React.FC = () => {
             <div className="bg-slate-950/80 border border-violet-700/60 rounded-2xl shadow-xl shadow-violet-900/80 overflow-hidden flex flex-col backdrop-blur-xl">
               <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-col items-center text-center gap-1">
                 <h3 className="text-sm font-semibold text-slate-50">
-                  Depression Visualization
+                Dep/Anx Prevalence
                 </h3>
                 <p className="text-xs text-slate-200">
-                  View how depression predictions vary with the same filters.
+                  View how depression and anxiety Prevalence vary.
                 </p>
               </div>
               <div className="w-full h-[520px] bg-slate-900 overflow-hidden">
@@ -109,11 +107,10 @@ const DashboardSection: React.FC = () => {
             <div className="bg-slate-950/80 border border-emerald-700/60 rounded-2xl shadow-xl shadow-emerald-900/80 overflow-hidden flex flex-col backdrop-blur-xl">
               <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-col items-center text-center gap-1">
                 <h3 className="text-sm font-semibold text-slate-50">
-                  Risk & Factors Visualization
+                Dep/Anx Percentage by Category
                 </h3>
                 <p className="text-xs text-slate-200">
-                  Examine how lifestyle and other factors relate to predicted
-                  anxiety and depression.
+                  Examine how depression and anxiety Percentage vary by Category.
                 </p>
               </div>
               <div className="w-full h-[520px] bg-slate-900 overflow-hidden">
@@ -131,9 +128,7 @@ const DashboardSection: React.FC = () => {
       )}
 
       <p className="text-xs text-slate-500 mt-3 text-center">
-        These visualizations do not provide a diagnosis and should not be used
-        for emergency decision-making. If you are concerned about your mental
-        health, please speak with a qualified professional.
+      These graphical representations shouldn't be utilized for making urgent decisions because they don't offer a test. Please consult an experienced professional if you are worried about your mental health.
       </p>
     </section>
   );

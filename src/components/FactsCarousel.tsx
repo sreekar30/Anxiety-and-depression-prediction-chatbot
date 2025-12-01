@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 
 const FACTS: string[] = [
-  "Anxiety and depression are among the most common mental health conditions worldwide.",
-  "Experiencing anxiety or depression is not a sign of weakness; they are complex health conditions.",
-  "Sleep, physical activity, social support, and stress all play a role in mental health.",
-  "Early support and treatment can greatly improve outcomes for people with anxiety and depression.",
-  "If thoughts of self-harm or suicide appear, seeking immediate professional help is critical.",
+  "Age group of 18-29 are more prone to Anxiety/Depression than Age Groups.",
+  "Physical Health Status is crucial, as depleting health can lead to Depression/Anxiety.",
+  "People who received emotional or social support rarely showed most depression/anxiety cases.",
+  "People who slept very low or very high showed signs of Depression/Anxiety more.",
+  "People dissatisfied towards their life showed more sign of Depression/Anxiety.",
 ];
 
 const FactsCarousel: React.FC = () => {
