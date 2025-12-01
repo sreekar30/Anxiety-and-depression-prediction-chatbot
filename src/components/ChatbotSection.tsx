@@ -1,12 +1,11 @@
-// --------------------------------------------
-// ChatbotSection.tsx — FINAL FULL VERSION
-// --------------------------------------------
+// src/components/ChatbotSection.tsx
+// FINAL VERSION WITH MOBILE-FRIENDLY HEIGHT
+
 import React, { useEffect, useRef, useState } from "react";
 import { CHAT_API_URL, CHAT_API_KEY, OPENAI_API_KEY } from "../config";
 
 type Role = "user" | "assistant";
 
-// FASTAPI feature IDs
 type FeatureId =
   | "AGEP_A"
   | "SEX_A"
@@ -32,9 +31,8 @@ interface ChatMessage {
   isQuestion?: boolean;
 }
 
-type Phase = "intro" | "collecting" | "review" | "after_prediction" | "restart_prompt";
+type Phase = "intro" | "collecting" | "review" | "after_prediction";
 
-// Ordered features for questionnaire
 const featureOrder: FeatureId[] = [
   "AGEP_A",
   "SEX_A",
@@ -54,64 +52,8 @@ const featureOrder: FeatureId[] = [
   "LSATIS4_A",
 ];
 
-// ----------------------
-// OpenAI mental health bot
-// ----------------------
-const mentalHealthSystemPrompt = {
-  role: "system" as const,
-  content: `
-You are "MIND Companion", a calm, supportive mental health AI focused ONLY on
-depression, anxiety, stress, and emotional wellbeing.
+// ---------- feature schemas ----------
 
-Rules:
-- Only answer mental-health related questions.
-- Decline unrelated topics (math, programming, politics, etc.)
-- Never give medical or medication advice.
-- Encourage professional help if symptoms are serious.
-- Use warm, supportive, concise language.
-`,
-};
-
-async function callOpenAI(
-  messages: { role: "system" | "user"; content: string }[]
-): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    return "I cannot connect to the language model right now because no OpenAI API key is configured.";
-  }
-
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error("OpenAI Error:", data);
-      return "I'm having trouble thinking right now. Please try again.";
-    }
-
-    const content = data?.choices?.[0]?.message?.content;
-    return typeof content === "string"
-      ? content.trim()
-      : "I'm having trouble thinking right now. Please try again.";
-  } catch (err) {
-    console.error("OpenAI Fetch Error:", err);
-    return "I’m having trouble connecting right now. Please try again.";
-  }
-}
-
-// ----------------------
-// Schema Types
-// ----------------------
 interface BaseSchema {
   id: FeatureId;
   featureKey: FeatureId;
@@ -141,9 +83,6 @@ interface CategoricalSchema extends BaseSchema {
 
 type FeatureSchema = NumericSchema | CategoricalSchema;
 
-// ----------------------
-// Feature Schemas (UPDATED TO MATCH FASTAPI)
-// ----------------------
 const featureSchemas: Record<FeatureId, FeatureSchema> = {
   // ---- Age ----
   AGEP_A: {
@@ -238,7 +177,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- REGION (US Census regions) ----
+  // ---- REGION ----
   REGION: {
     id: "REGION",
     featureKey: "REGION",
@@ -247,12 +186,11 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     question:
       "Which region of the United States do you currently live in? You can type the number or the phrase.",
     info:
-      "These groups are based on standard U.S. Census regions:\n\n" +
-      "• Northeast – e.g., NY, MA, PA, NJ.\n" +
-      "• Midwest – e.g., IL, OH, MI, MN.\n" +
-      "• South – e.g., TX, FL, GA, NC.\n" +
-      "• West – e.g., CA, WA, AZ, CO.\n\n" +
-      "If you're not sure, just choose the option that sounds closest.",
+      "This is a broad region, not your exact state or address:\n\n" +
+      "• Northeast – e.g., NY, MA, PA\n" +
+      "• Midwest – e.g., IL, OH, MI\n" +
+      "• South – e.g., TX, FL, GA\n" +
+      "• West – e.g., CA, WA, AZ",
     options: [
       { code: 1, label: "Northeast", aliases: ["northeast", "ne"] },
       { code: 2, label: "Midwest", aliases: ["midwest", "mw"] },
@@ -261,125 +199,113 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- URBRRL23 (Urban–rural classification) ----
+  // ---- URBRRL23 ----
   URBRRL23: {
     id: "URBRRL23",
     featureKey: "URBRRL23",
-    label: "urban–rural area type",
+    label: "urban/rural area type",
     type: "categorical",
     question:
       "Which best describes the type of area you live in? You can type the number or the phrase.",
     info:
-      "This is based on the NCHS Urban–Rural Classification for U.S. counties:\n\n" +
-      "• Large central metro – Dense city areas in major metro regions.\n" +
-      "• Large fringe metro – Suburbs around large cities.\n" +
-      "• Medium and small metro – Smaller cities and surrounding areas.\n" +
-      "• Nonmetropolitan – Towns or rural areas outside metro regions.",
+      "These options are based on the NCHS Urban–Rural classification:\n\n" +
+      "• Large central metro – big cities and downtown areas.\n" +
+      "• Large fringe metro – suburbs of large cities.\n" +
+      "• Medium and small metro – smaller cities.\n" +
+      "• Nonmetropolitan – towns or rural areas outside metro regions.",
     options: [
       {
         code: 1,
         label: "Large central metro",
-        aliases: ["large central metro", "city center", "big city"],
+        aliases: ["large central metro", "big city center", "downtown area"],
       },
       {
         code: 2,
         label: "Large fringe metro",
-        aliases: ["large fringe metro", "suburbs", "suburban"],
+        aliases: ["large fringe metro", "suburbs of big city", "outer city"],
       },
       {
         code: 3,
         label: "Medium and small metro",
-        aliases: ["medium metro", "small metro", "small city"],
+        aliases: [
+          "medium metro",
+          "small metro",
+          "smaller city",
+          "medium and small metro",
+        ],
       },
       {
         code: 4,
         label: "Nonmetropolitan",
-        aliases: ["nonmetropolitan", "rural", "small town"],
+        aliases: ["nonmetropolitan", "rural", "small town", "countryside"],
       },
     ],
   },
 
-  // ---- PCNTADLT_A (number of adults) ----
+  // ---- PCNTADLT_A ----
   PCNTADLT_A: {
     id: "PCNTADLT_A",
     featureKey: "PCNTADLT_A",
     label: "number of adults in household",
     type: "categorical",
     question:
-      "Including you, how many adults (18 or older) live in your household?",
-    info:
-      "Count adults who usually live in your home:\n\n" +
-      "• 1 adult – You live alone.\n" +
-      "• 2 adults – You plus one other adult.\n" +
-      "• 3+ adults – You plus two or more other adults.\n\n" +
-      "We removed the 'Not ascertained' category during data cleaning.",
+      "Including you, how many adults live in your household? You can type the number or the phrase.",
     options: [
-      { code: 1, label: "1 adult", aliases: ["1 adult", "one adult"] },
-      { code: 2, label: "2 adults", aliases: ["2 adults", "two adults"] },
+      { code: 1, label: "1 adult", aliases: ["1 adult", "just me", "only me"] },
+      {
+        code: 2,
+        label: "2 adults",
+        aliases: ["2 adults", "two adults"],
+      },
       {
         code: 3,
         label: "3+ adults",
-        aliases: ["3+ adults", "three or more adults", "many adults"],
+        aliases: ["3 adults", "3+ adults", "three or more adults"],
       },
     ],
   },
 
-  // ---- PCNTKIDS_A (number of children) ----
+  // ---- PCNTKIDS_A ----
   PCNTKIDS_A: {
     id: "PCNTKIDS_A",
     featureKey: "PCNTKIDS_A",
     label: "number of children in household",
     type: "categorical",
     question:
-      "How many children (under 18) live in your household? You can type the number or the phrase.",
-    info:
-      "Count children who usually live in your home:\n\n" +
-      "• 0 children – No children live with you.\n" +
-      "• 1 child – One child.\n" +
-      "• 2 children – Two children.\n" +
-      "• 3+ children – Three or more children.\n\n" +
-      "We removed the 'Not ascertained' category during data cleaning.",
+      "How many children live in your household? You can type the number or the phrase.",
     options: [
-      { code: 0, label: "0 children", aliases: ["0", "no children", "none"] },
-      { code: 1, label: "1 child", aliases: ["1 child", "one child"] },
-      { code: 2, label: "2 children", aliases: ["2 children", "two children"] },
+      { code: 0, label: "0 children", aliases: ["none", "zero"] },
+      {
+        code: 1,
+        label: "1 child",
+        aliases: ["1 child", "one child"],
+      },
+      {
+        code: 2,
+        label: "2 children",
+        aliases: ["two children", "2 children"],
+      },
       {
         code: 3,
         label: "3+ children",
-        aliases: ["3+ children", "three or more children", "many children"],
+        aliases: ["three or more", "3+ children", "three children or more"],
       },
     ],
   },
 
-  // ---- LEGMSTAT_A (marital status) ----
+  // ---- LEGMSTAT_A ----
   LEGMSTAT_A: {
     id: "LEGMSTAT_A",
     featureKey: "LEGMSTAT_A",
     label: "marital status",
     type: "categorical",
     question:
-      "What is your legal marital status? You can type the number or the phrase.",
+      "What is your current marital status? You can type the number or the phrase.",
     options: [
-      {
-        code: 1,
-        label: "Married",
-        aliases: ["married", "spouse", "husband", "wife"],
-      },
-      {
-        code: 2,
-        label: "Widowed",
-        aliases: ["widowed", "widow", "widower"],
-      },
-      {
-        code: 3,
-        label: "Divorced",
-        aliases: ["divorced"],
-      },
-      {
-        code: 4,
-        label: "Separated",
-        aliases: ["separated"],
-      },
+      { code: 1, label: "Married", aliases: ["married", "spouse"] },
+      { code: 2, label: "Widowed", aliases: ["widowed", "widow", "widower"] },
+      { code: 3, label: "Divorced", aliases: ["divorced"] },
+      { code: 4, label: "Separated", aliases: ["separated"] },
       {
         code: 5,
         label: "Never married",
@@ -388,7 +314,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- PHSTAT_A (physical health) ----
+  // ---- PHSTAT_A ----
   PHSTAT_A: {
     id: "PHSTAT_A",
     featureKey: "PHSTAT_A",
@@ -420,7 +346,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- BMICAT_A (weight category) ----
+  // ---- BMICAT_A ----
   BMICAT_A: {
     id: "BMICAT_A",
     featureKey: "BMICAT_A",
@@ -465,7 +391,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- DRKSTAT_A (alcohol use) ----
+  // ---- DRKSTAT_A ----
   DRKSTAT_A: {
     id: "DRKSTAT_A",
     featureKey: "DRKSTAT_A",
@@ -517,7 +443,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- SLPHOURS_A (sleep hours) ----
+  // ---- SLPHOURS_A ----
   SLPHOURS_A: {
     id: "SLPHOURS_A",
     featureKey: "SLPHOURS_A",
@@ -530,26 +456,21 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     unitHint: "hours per night",
   },
 
-  // ---- SUPPORT_A (social/emotional support) ----
+  // ---- SUPPORT_A ----
   SUPPORT_A: {
     id: "SUPPORT_A",
     featureKey: "SUPPORT_A",
-    label: "emotional/social support",
+    label: "emotional support",
     type: "categorical",
     question:
-      "Overall, how often do you feel you have emotional or social support when you need it? You can type the number or the phrase.",
+      "How often do you feel you have someone you can rely on for emotional support? You can type the number or the phrase.",
     info:
-      "Think about friends, family, or other people you can lean on emotionally:\n\n" +
-      "• Always – You almost always have someone to turn to.\n" +
-      "• Usually – You have support in most situations.\n" +
-      "• Sometimes – Support is there on and off.\n" +
-      "• Rarely – You rarely feel supported.\n" +
-      "• Never – You feel like you don't have anyone to rely on.",
+      "Think about friends, family, or others you can talk to when you’re stressed or upset.",
     options: [
       {
         code: 1,
         label: "Always",
-        aliases: ["always", "almost always"],
+        aliases: ["always", "all the time"],
       },
       {
         code: 2,
@@ -559,22 +480,22 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
       {
         code: 3,
         label: "Sometimes",
-        aliases: ["sometimes", "on and off", "occasionally"],
+        aliases: ["sometimes", "occasionally"],
       },
       {
         code: 4,
         label: "Rarely",
-        aliases: ["rarely", "hardly ever"],
+        aliases: ["rarely", "almost never"],
       },
       {
         code: 5,
         label: "Never",
-        aliases: ["never", "no support"],
+        aliases: ["never"],
       },
     ],
   },
 
-  // ---- SLPFLL_A (how refreshed after sleep) ----
+  // ---- SLPFLL_A ----
   SLPFLL_A: {
     id: "SLPFLL_A",
     featureKey: "SLPFLL_A",
@@ -617,7 +538,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- LONELY_A (loneliness) ----
+  // ---- LONELY_A ----
   LONELY_A: {
     id: "LONELY_A",
     featureKey: "LONELY_A",
@@ -652,7 +573,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     ],
   },
 
-  // ---- LSATIS4_A (life satisfaction) ----
+  // ---- LSATIS4_A ----
   LSATIS4_A: {
     id: "LSATIS4_A",
     featureKey: "LSATIS4_A",
@@ -697,200 +618,66 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
   },
 };
 
+// ---------- OpenAI helper ----------
 
-// --------------------------------------------
-// PART 2 — Continue featureSchemas
-// --------------------------------------------
+const mentalHealthSystemPrompt = {
+  role: "system" as const,
+  content: `
+You are "MIND Companion", a calm, supportive mental health AI focused ONLY on
+depression, anxiety, stress, and emotional wellbeing. 
 
-// ---- LEGMSTAT_A ----
-featureSchemas.LEGMSTAT_A = {
-  id: "LEGMSTAT_A",
-  featureKey: "LEGMSTAT_A",
-  label: "marital status",
-  type: "categorical",
-  question: "What is your current marital status?",
-  options: [
-    { code: 1, label: "Married", aliases: ["married"] },
-    { code: 2, label: "Widowed", aliases: ["widowed"] },
-    { code: 3, label: "Divorced", aliases: ["divorced"] },
-    { code: 4, label: "Separated", aliases: ["separated"] },
-    { code: 5, label: "Never married", aliases: ["single", "never married"] },
-  ],
+Rules:
+- You ONLY answer questions related to mental health, mood, coping, self-care, relationships, or interpreting the prediction results.
+- If the user asks about anything unrelated (math, coding, politics, etc.), politely decline and say you are a mental health chatbot.
+- You are NOT a doctor and do not give diagnoses or medication advice.
+- Always encourage reaching out to licensed professionals for serious or ongoing concerns.
+- If a user seems in crisis or talks about self-harm, encourage them to contact local emergency services or a trusted person immediately.
+- Use warm, simple language. Answer in short paragraphs, not long walls of text.`,
 };
 
-// ---- PHSTAT_A ----
-featureSchemas.PHSTAT_A = {
-  id: "PHSTAT_A",
-  featureKey: "PHSTAT_A",
-  label: "physical health",
-  type: "categorical",
-  question:
-    "Overall, how would you rate your physical health? You can type the number or phrase.",
-  info:
-    "Physical health reflects your daily energy, pain levels, mobility, and how easily you perform everyday activities.\n\n" +
-    "• Excellent – very energetic, few limitations\n" +
-    "• Very good – mostly healthy with minor issues\n" +
-    "• Good – generally okay but some issues\n" +
-    "• Fair – frequent discomfort or limits\n" +
-    "• Poor – major impact on daily life",
-  options: [
-    { code: 1, label: "Excellent", aliases: ["excellent"] },
-    { code: 2, label: "Very good", aliases: ["very good"] },
-    { code: 3, label: "Good", aliases: ["good"] },
-    { code: 4, label: "Fair", aliases: ["fair"] },
-    { code: 5, label: "Poor", aliases: ["poor"] },
-  ],
-};
+async function callOpenAI(
+  messages: { role: "system" | "user"; content: string }[]
+): Promise<string> {
+  if (!OPENAI_API_KEY) {
+    return "I can't reach the language model right now because no OpenAI API key is configured.";
+  }
 
-// ---- BMICAT_A ----
-featureSchemas.BMICAT_A = {
-  id: "BMICAT_A",
-  featureKey: "BMICAT_A",
-  label: "weight category",
-  type: "categorical",
-  question:
-    "Which best describes your body weight category? Choose the closest match.",
-  info:
-    "Based on BMI ranges:\n\n" +
-    "• Underweight – below typical range\n" +
-    "• Healthy weight – typical range\n" +
-    "• Overweight – above typical range\n" +
-    "• Obese – well above typical range",
-  options: [
-    { code: 1, label: "Underweight", aliases: ["underweight", "very thin"] },
-    { code: 2, label: "Healthy weight", aliases: ["healthy", "normal"] },
-    { code: 3, label: "Overweight", aliases: ["overweight"] },
-    { code: 4, label: "Obese", aliases: ["obese"] },
-  ],
-};
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages,
+      }),
+    });
 
-// ---- DRKSTAT_A ----
-featureSchemas.DRKSTAT_A = {
-  id: "DRKSTAT_A",
-  featureKey: "DRKSTAT_A",
-  label: "alcohol use",
-  type: "categorical",
-  question: "Which best describes your alcohol use?",
-  options: [
-    {
-      code: 1,
-      label: "Never drink",
-      aliases: ["never", "don't drink", "no alcohol"],
-    },
-    {
-      code: 2,
-      label: "Used to drink, not now",
-      aliases: ["used to drink", "former drinker"],
-    },
-    {
-      code: 3,
-      label: "Light/occasional drinking",
-      aliases: ["light drinker", "occasionally"],
-    },
-    {
-      code: 4,
-      label: "Heavy drinking",
-      aliases: ["heavy", "a lot", "binge"],
-    },
-  ],
-};
+    const data = await res.json();
+    if (!res.ok) {
+      console.error("OpenAI error:", data);
+      return "I'm having trouble thinking right now. Please try again in a moment.";
+    }
+    const content = data?.choices?.[0]?.message?.content;
+    return typeof content === "string"
+      ? content.trim()
+      : "I'm having trouble thinking right now. Please try again in a moment.";
+  } catch (err) {
+    console.error("OpenAI fetch error:", err);
+    return "I'm having trouble connecting at the moment. Please try again in a bit.";
+  }
+}
 
-// ---- SLPHOURS_A ----
-featureSchemas.SLPHOURS_A = {
-  id: "SLPHOURS_A",
-  featureKey: "SLPHOURS_A",
-  label: "sleep hours",
-  type: "numeric",
-  question:
-    "On average, how many hours do you sleep per night? (3 to 14 hours)",
-  min: 3,
-  max: 14,
-  unitHint: "hours per night",
-};
+// ---------- local helpers ----------
 
-// ---- SUPPORT_A ----
-featureSchemas.SUPPORT_A = {
-  id: "SUPPORT_A",
-  featureKey: "SUPPORT_A",
-  label: "emotional support",
-  type: "categorical",
-  question:
-    "How often do you get the emotional support you need? Type the number or phrase.",
-  info:
-    "Emotional support includes feeling understood, cared for, and having someone to talk to.\n\n" +
-    "Think about the past month.",
-  options: [
-    { code: 1, label: "Always", aliases: ["always"] },
-    { code: 2, label: "Usually", aliases: ["usually", "most of the time"] },
-    { code: 3, label: "Sometimes", aliases: ["sometimes", "occasionally"] },
-    { code: 4, label: "Rarely", aliases: ["rarely"] },
-    { code: 5, label: "Never", aliases: ["never"] },
-  ],
-};
-
-// ---- SLPFLL_A ----
-featureSchemas.SLPFLL_A = {
-  id: "SLPFLL_A",
-  featureKey: "SLPFLL_A",
-  label: "how refreshed you feel after sleep",
-  type: "categorical",
-  question:
-    "After sleeping, how refreshed do you usually feel?",
-  info:
-    "Think about most days:\n\n" +
-    "• Not at all – still exhausted\n" +
-    "• A little – slightly rested\n" +
-    "• Fairly – okay with some energy\n" +
-    "• Very – energized and clear",
-  options: [
-    { code: 1, label: "Not at all refreshed", aliases: ["not at all"] },
-    { code: 2, label: "A little refreshed", aliases: ["a little"] },
-    { code: 3, label: "Fairly refreshed", aliases: ["fairly"] },
-    { code: 4, label: "Very refreshed", aliases: ["very refreshed"] },
-  ],
-};
-
-// ---- LONELY_A ----
-featureSchemas.LONELY_A = {
-  id: "LONELY_A",
-  featureKey: "LONELY_A",
-  label: "loneliness",
-  type: "categorical",
-  question: "How often do you feel lonely?",
-  options: [
-    { code: 1, label: "Never", aliases: ["never"] },
-    { code: 2, label: "Rarely", aliases: ["rarely"] },
-    { code: 3, label: "Sometimes", aliases: ["sometimes"] },
-    { code: 4, label: "Often", aliases: ["often", "frequently"] },
-    { code: 5, label: "Always", aliases: ["always"] },
-  ],
-};
-
-// ---- LSATIS4_A ----
-featureSchemas.LSATIS4_A = {
-  id: "LSATIS4_A",
-  featureKey: "LSATIS4_A",
-  label: "life satisfaction",
-  type: "categorical",
-  question:
-    "Overall, how satisfied are you with your life right now?",
-  options: [
-    { code: 1, label: "Very satisfied", aliases: ["very satisfied"] },
-    { code: 2, label: "Satisfied", aliases: ["satisfied"] },
-    { code: 3, label: "Dissatisfied", aliases: ["dissatisfied"] },
-    { code: 4, label: "Very dissatisfied", aliases: ["very dissatisfied"] },
-  ],
-};
-
-// --------------------------------------------
-// Helper functions
-// --------------------------------------------
 function normalize(text: string): string {
   return text.trim().toLowerCase();
 }
 
 function extractFirstNumber(text: string): number | null {
-  const match = text.match(/-?\d+/);
+  const match = text.match(/-?\d+(\.\d+)?/);
   if (!match) return null;
   const n = Number(match[0]);
   return isNaN(n) ? null : n;
@@ -917,24 +704,26 @@ function interpretCategorical(
 ): { value: number; label: string; interpreted: boolean } | null {
   const lower = normalize(userText);
 
-  // User types a number
-  const n = extractFirstNumber(userText);
-  if (n !== null) {
-    const opt = schema.options.find((o) => o.code === n);
-    if (opt) return { value: opt.code, label: opt.label, interpreted: false };
+  const num = extractFirstNumber(userText);
+  if (num !== null) {
+    const idx = Math.round(num) - 1;
+    if (idx >= 0 && idx < schema.options.length) {
+      const chosen = schema.options[idx];
+      return { value: chosen.code, label: chosen.label, interpreted: false };
+    }
   }
 
-  // Exact label match
   for (const opt of schema.options) {
-    if (lower === normalize(opt.label)) {
+    const labelLow = normalize(opt.label);
+    if (lower === labelLow || lower.includes(labelLow)) {
       return { value: opt.code, label: opt.label, interpreted: false };
     }
   }
 
-  // Alias match
   for (const opt of schema.options) {
     for (const alias of opt.aliases) {
-      if (lower.includes(normalize(alias))) {
+      const aliasLow = normalize(alias);
+      if (lower === aliasLow || lower.includes(aliasLow)) {
         return { value: opt.code, label: opt.label, interpreted: true };
       }
     }
@@ -943,59 +732,87 @@ function interpretCategorical(
   return null;
 }
 
+interface PredictionResult {
+  depression_probability?: number;
+  anxiety_probability?: number;
+}
+
 function formatPercentage(p?: number): string {
-  if (!p && p !== 0) return "N/A";
+  if (p === undefined || p === null || isNaN(p)) return "N/A";
   const pct = Math.round(p * 1000) / 10;
   return `${pct.toFixed(1)}%`;
 }
 
-function buildSuggestionText(result: { depression_probability?: number; anxiety_probability?: number }): string {
+function buildSuggestionText(result: PredictionResult): string {
   const d = result.depression_probability ?? 0;
   const a = result.anxiety_probability ?? 0;
-  const max = Math.max(d, a);
+  const maxProb = Math.max(d, a);
 
-  if (max < 0.25)
-    return "These scores suggest a low likelihood of strong depression or anxiety. Keep maintaining healthy habits.";
-
-  if (max < 0.5)
-    return "These scores suggest a mild likelihood. Pay attention to your emotional patterns and maintain healthy routines.";
-
-  if (max < 0.75)
-    return "These scores suggest a moderate likelihood. Consider talking with a counselor or therapist if things feel overwhelming.";
-
-  return "These scores suggest a higher likelihood. If you feel distressed or overwhelmed, please reach out to a mental health professional or trusted person soon.";
+  if (maxProb < 0.25) {
+    return (
+      "These scores suggest a low chance of strong depression or anxiety right now. " +
+      "Still, it’s good to keep taking care of your sleep, movement, and social connections."
+    );
+  }
+  if (maxProb < 0.5) {
+    return (
+      "These scores suggest a mild chance of depression or anxiety. " +
+      "Notice how your mood changes over time. Simple habits like regular sleep, gentle exercise, and talking with someone you trust can help."
+    );
+  }
+  if (maxProb < 0.75) {
+    return (
+      "These scores suggest a moderate chance of depression or anxiety. " +
+      "If these feelings are bothering you, consider talking to a counselor, therapist, or doctor. " +
+      "You don’t have to handle it all alone."
+    );
+  }
+  return (
+    "These scores suggest a higher chance of depression or anxiety. " +
+    "If you feel very low, very anxious, or overwhelmed, please reach out to a mental health professional or a trusted person soon. " +
+    "Getting support is a strong and important step."
+  );
 }
 
-// --------------------------------------------
-// Component: ChatbotSection (BEGIN)
-// --------------------------------------------
+// ---------- main component ----------
+
 const ChatbotSection: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<Phase>("intro");
   const [featureIndex, setFeatureIndex] = useState<number>(-1);
   const [collected, setCollected] = useState<Record<string, number>>({});
-  const [lastPrediction, setLastPrediction] = useState<any>(null);
+  const [lastPrediction, setLastPrediction] = useState<PredictionResult | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
+  const [hasPredicted, setHasPredicted] = useState(false);
   const [hoveredInfoFeatureId, setHoveredInfoFeatureId] =
     useState<FeatureId | null>(null);
+  const [editingFeatureId, setEditingFeatureId] = useState<FeatureId | null>(
+    null
+  );
 
+  const chatSectionRef = useRef<HTMLElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   const introMessages: ChatMessage[] = [
     {
       role: "assistant",
-      text: "Hi, I'm MIND Companion — a mental health chatbot focusing on depression and anxiety."
+      text:
+        "Hi, I'm MIND Companion — a mental health chatbot focused on depression and anxiety.",
     },
     {
       role: "assistant",
-      text: "I can guide you through a questionnaire and show your depression/anxiety prediction."
+      text:
+        "I can walk you through a quick prediction based on your lifestyle and wellbeing, and I can also answer questions about how you're feeling.",
     },
     {
       role: "assistant",
-      text: "Would you like to start the prediction now?"
-    }
+      text:
+        "Would you like to start the depression/anxiety prediction now?",
+    },
   ];
 
   useEffect(() => {
@@ -1004,46 +821,72 @@ const ChatbotSection: React.FC = () => {
       setPhase("intro");
       setFeatureIndex(-1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // scroll inside the chat box to the latest message
   useEffect(() => {
     const container = messagesContainerRef.current;
-    if (container) {
-      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-    }
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages.length, isPredicting]);
 
   const addMessage = (msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
+  
+    // On mobile, when the assistant asks a new question,
+    // gently scroll the *page* so the chat stays in view.
+    if (
+      msg.role === "assistant" &&
+      msg.isQuestion &&
+      typeof window !== "undefined" &&
+      window.innerWidth < 768 // only phones / small screens
+    ) {
+      // Wait a moment so layout settles, then scroll
+      setTimeout(() => {
+        const sectionEl = chatSectionRef.current;
+        if (!sectionEl) return;
+  
+        sectionEl.scrollIntoView({
+          behavior: "smooth",
+          block: "center", // center the chat section in the viewport
+        });
+      }, 150);
+    }
   };
+  
 
-  // --- extra state for editing + restart flow ---
-  const [isEditingAnswer, setIsEditingAnswer] = useState(false);
-  const [waitingForRestartConfirm, setWaitingForRestartConfirm] =
-    useState(false);
-
-  // Reset to initial intro state
   const resetChat = () => {
     setMessages(introMessages);
     setPhase("intro");
     setFeatureIndex(-1);
     setCollected({});
     setLastPrediction(null);
+    setHasPredicted(false);
+    setInput("");
     setLoading(false);
     setIsPredicting(false);
     setHoveredInfoFeatureId(null);
-    setIsEditingAnswer(false);
-    setWaitingForRestartConfirm(false);
+    setEditingFeatureId(null);
   };
 
-  // Call OpenAI mental–health bot
-  const askMentalHealthAgent = async (userText: string, extra = "") => {
+  const askMentalHealthAgent = async (
+    userText: string,
+    extraInstruction = ""
+  ) => {
     setLoading(true);
     const reply = await callOpenAI([
       mentalHealthSystemPrompt,
       {
         role: "user",
-        content: `User message: "${userText}"\n\n${extra}\nIf the message is unrelated to mental health, politely decline.`,
+        content: `
+User message: "${userText}"
+
+${extraInstruction}
+If the question is unrelated to mental health, politely decline and remind them you're a mental health chatbot.`,
       },
     ]);
     addMessage({ role: "assistant", text: reply });
@@ -1051,6 +894,7 @@ const ChatbotSection: React.FC = () => {
   };
 
   const currentFeatureId = (): FeatureId | null => {
+    if (editingFeatureId) return editingFeatureId;
     if (featureIndex < 0 || featureIndex >= featureOrder.length) return null;
     return featureOrder[featureIndex];
   };
@@ -1067,7 +911,7 @@ const ChatbotSection: React.FC = () => {
       });
       lines.push("You can reply with the number or a short phrase.");
     } else if (schema.type === "numeric" && schema.unitHint) {
-      lines.push(`You can reply with a single number (${schema.unitHint}).`);
+      lines.push(`You can reply with a number (${schema.unitHint}).`);
     }
 
     addMessage({
@@ -1082,40 +926,30 @@ const ChatbotSection: React.FC = () => {
     setPhase("collecting");
     setFeatureIndex(0);
     setCollected({});
+    setHasPredicted(false);
     setLastPrediction(null);
-    setIsEditingAnswer(false);
-    setWaitingForRestartConfirm(false);
-
+    setEditingFeatureId(null);
     addMessage({
       role: "assistant",
       text:
-        "Great — we’ll go through a short set of questions. Please answer as honestly as you can.",
+        "Great, we'll go through a few short questions. Please answer as honestly as you can.",
     });
     askQuestionForFeature(featureOrder[0]);
   };
 
   const handleChangeLastAnswerCommand = () => {
-    if (featureIndex <= 0 && !Object.keys(collected).length) {
+    if (featureIndex <= 0) {
       addMessage({
         role: "assistant",
         text:
-          "We haven't recorded any answers yet to change. Let's start from the first question.",
+          "We haven't saved any answers yet to change. Let's start with the first question.",
       });
       return;
     }
-
-    // Last answered feature is either currentIndex - 1 (if collecting)
-    // or the last in featureOrder (if we’re in review).
-    const lastIdx =
-      phase === "collecting"
-        ? Math.max(featureIndex - 1, 0)
-        : featureOrder.length - 1;
-
-    const fid = featureOrder[lastIdx];
-    setFeatureIndex(lastIdx);
+    const prevIndex = featureIndex - 1;
+    const fid = featureOrder[prevIndex];
     setPhase("collecting");
-    setIsEditingAnswer(true);
-
+    setEditingFeatureId(fid);
     addMessage({
       role: "assistant",
       text: `No problem, let's update your ${featureSchemas[fid].label}.`,
@@ -1123,41 +957,10 @@ const ChatbotSection: React.FC = () => {
     askQuestionForFeature(fid);
   };
 
-  const showReviewSummary = () => {
-    const lines: string[] = [];
-    lines.push("Here’s a quick summary of what I recorded:");
-
-    featureOrder.forEach((fid) => {
-      const schema = featureSchemas[fid];
-      const val = collected[fid];
-      if (val === undefined) return;
-
-      if (schema.type === "numeric") {
-        const numSchema = schema as NumericSchema;
-        if (numSchema.unitHint) {
-          lines.push(`- ${schema.label}: ${val} ${numSchema.unitHint}`);
-        } else {
-          lines.push(`- ${schema.label}: ${val}`);
-        }
-      } else {
-        const cat = schema as CategoricalSchema;
-        const opt = cat.options.find((o) => o.code === val);
-        const label = opt ? opt.label : `code ${val}`;
-        lines.push(`- ${schema.label}: ${label}`);
-      }
-    });
-
-    lines.push(
-      "\nIf you'd like to change anything, you can say things like:\n" +
-        '- "change my last answer"\n' +
-        '- "change my life satisfaction", "edit my region", etc.\n\n' +
-        'When everything looks right, you can type "confirm", "ok", or "looks good" and I’ll run the prediction.'
-    );
-
-    addMessage({ role: "assistant", text: lines.join("\n") });
-  };
-
   const sendToFastAPI = async () => {
+    if (hasPredicted) return;
+    setHasPredicted(true);
+
     if (!CHAT_API_URL) {
       addMessage({
         role: "assistant",
@@ -1191,7 +994,7 @@ const ChatbotSection: React.FC = () => {
         return;
       }
 
-      const result = JSON.parse(text);
+      const result: PredictionResult = JSON.parse(text);
       setLastPrediction(result);
 
       const anxietyPct = formatPercentage(result.anxiety_probability);
@@ -1202,20 +1005,11 @@ const ChatbotSection: React.FC = () => {
         `Your prediction scores are:\n\n` +
         `• Anxiety: ${anxietyPct}\n` +
         `• Depression: ${depressionPct}\n\n` +
-        `Suggestion: ${suggestion}`;
+        `Suggestion: ${suggestion}\n\n` +
+        `If you'd like, you can type "restart" or "start again" to go through the questionnaire one more time.`;
 
       addMessage({ role: "assistant", text: summaryText });
-
-      // Ask if they want to restart the questionnaire
-      addMessage({
-        role: "assistant",
-        text:
-          "If you’d like, I can restart the questionnaire so you can try different answers.\n" +
-          'Type "restart" or "start again" to begin a new run, or you can just keep chatting about how you feel.',
-      });
-
       setPhase("after_prediction");
-      setWaitingForRestartConfirm(true);
     } catch (err) {
       console.error("FastAPI fetch error:", err);
       addMessage({
@@ -1228,6 +1022,40 @@ const ChatbotSection: React.FC = () => {
     }
   };
 
+  const showReviewSummary = () => {
+    const lines: string[] = [];
+    lines.push("Here’s a quick summary of what I recorded:");
+
+    featureOrder.forEach((fid) => {
+      const schema = featureSchemas[fid];
+      const val = collected[fid];
+      if (val === undefined) return;
+
+      if (schema.type === "numeric") {
+        const numSchema = schema as NumericSchema;
+        if (numSchema.unitHint) {
+          lines.push(`- ${schema.label}: ${val} ${numSchema.unitHint}`);
+        } else {
+          lines.push(`- ${schema.label}: ${val}`);
+        }
+      } else {
+        const cat = schema as CategoricalSchema;
+        const opt = cat.options.find((o) => o.code === val);
+        const label = opt ? opt.label : `code ${val}`;
+        lines.push(`- ${schema.label}: ${label}`);
+      }
+    });
+
+    lines.push(
+      "\nIf you'd like to change anything, you can say things like:\n" +
+        '- "change my last answer"\n' +
+        '- "change my sleep hours" or "edit my life satisfaction"\n\n' +
+        'When everything looks right, you can type "confirm", "ok", or "looks good" and I’ll run the prediction.'
+    );
+
+    addMessage({ role: "assistant", text: lines.join("\n") });
+  };
+
   const handleEditByName = (textLower: string): boolean => {
     const mapping: { keywords: string[]; feature: FeatureId }[] = [
       { keywords: ["age"], feature: "AGEP_A" },
@@ -1237,13 +1065,13 @@ const ChatbotSection: React.FC = () => {
       { keywords: ["urban", "rural", "metro"], feature: "URBRRL23" },
       { keywords: ["adults"], feature: "PCNTADLT_A" },
       { keywords: ["children", "kids"], feature: "PCNTKIDS_A" },
-      { keywords: ["marital", "married"], feature: "LEGMSTAT_A" },
+      { keywords: ["marital", "married", "relationship"], feature: "LEGMSTAT_A" },
       { keywords: ["physical health", "health"], feature: "PHSTAT_A" },
       { keywords: ["weight", "bmi"], feature: "BMICAT_A" },
-      { keywords: ["alcohol", "drink"], feature: "DRKSTAT_A" },
-      { keywords: ["sleep hours"], feature: "SLPHOURS_A" },
-      { keywords: ["refreshed", "sleep quality"], feature: "SLPFLL_A" },
+      { keywords: ["drink", "alcohol"], feature: "DRKSTAT_A" },
+      { keywords: ["sleep hours", "sleep"], feature: "SLPHOURS_A" },
       { keywords: ["support"], feature: "SUPPORT_A" },
+      { keywords: ["refreshed", "sleep quality"], feature: "SLPFLL_A" },
       { keywords: ["lonely", "loneliness"], feature: "LONELY_A" },
       { keywords: ["life satisfaction", "satisfied"], feature: "LSATIS4_A" },
     ];
@@ -1252,11 +1080,8 @@ const ChatbotSection: React.FC = () => {
       if (entry.keywords.some((k) => textLower.includes(k))) {
         const idx = featureOrder.indexOf(entry.feature);
         if (idx === -1) break;
-
         setPhase("collecting");
-        setFeatureIndex(idx);
-        setIsEditingAnswer(true);
-
+        setEditingFeatureId(entry.feature);
         addMessage({
           role: "assistant",
           text: `Sure, let's update your ${featureSchemas[entry.feature].label}.`,
@@ -1273,8 +1098,8 @@ const ChatbotSection: React.FC = () => {
     if (!fid) return;
 
     const schema = featureSchemas[fid];
-    const lower = normalize(text);
 
+    const lower = normalize(text);
     if (lower.includes("change my last answer")) {
       handleChangeLastAnswerCommand();
       return;
@@ -1314,21 +1139,26 @@ const ChatbotSection: React.FC = () => {
 
     setCollected((prev) => ({ ...prev, [fid]: value }));
 
-    if (schema.type === "categorical" && interpretedCat && interpretedCat.interpreted) {
+    if (
+      schema.type === "categorical" &&
+      interpretedCat &&
+      interpretedCat.interpreted
+    ) {
       addMessage({
         role: "assistant",
-        text: `I'll interpret your answer as "${interpretedCat.label}". If that's not right, please type "change my last answer".`,
+        text: `I'll interpret your answer as: "${interpretedCat.label}". If that's not right, please type "change my last answer".`,
       });
     }
 
-    // If we are in edit mode, go straight back to review summary
-    if (isEditingAnswer) {
-      setIsEditingAnswer(false);
+    // If we were editing a past answer, go back to review after saving
+    if (editingFeatureId) {
+      setEditingFeatureId(null);
       setPhase("review");
       showReviewSummary();
       return;
     }
 
+    // Normal forward flow
     const nextIndex = featureIndex + 1;
     if (nextIndex < featureOrder.length) {
       setFeatureIndex(nextIndex);
@@ -1362,40 +1192,22 @@ const ChatbotSection: React.FC = () => {
 
     if (handleEditByName(lower)) return;
 
-    // Otherwise treat as a chat question
     void askMentalHealthAgent(text);
   };
 
   const handleUserMessageAfterPrediction = (text: string) => {
     const lower = normalize(text);
-
-    if (
-      waitingForRestartConfirm &&
-      (lower.includes("restart") || lower.includes("start again"))
-    ) {
+    if (lower.includes("start again") || lower.includes("restart")) {
       resetChat();
-      // Immediately start new questionnaire
-      beginQuestionnaire();
-      return;
-    }
-
-    if (
-      waitingForRestartConfirm &&
-      (lower === "no" || lower.includes("not now") || lower.includes("later"))
-    ) {
-      setWaitingForRestartConfirm(false);
-      addMessage({
-        role: "assistant",
-        text:
-          "Okay, we’ll keep your current results. You can still ask me questions about how you're feeling.",
-      });
       return;
     }
 
     void askMentalHealthAgent(
       text,
       lastPrediction
-        ? `Their last prediction was: ${JSON.stringify(lastPrediction)}`
+        ? `If helpful, you can refer to their previous prediction: ${JSON.stringify(
+            lastPrediction
+          )}`
         : ""
     );
   };
@@ -1444,14 +1256,16 @@ const ChatbotSection: React.FC = () => {
     }
   };
 
-  // --------------------------------------------
-  // JSX UI
-  // --------------------------------------------
-  return (
-    <section
-      id="chatbot"
-      className="mx-auto max-w-6xl px-4 py-10 md:py-14 border-t border-slate-800 animate-fadeInUp"
-    >
+  // ---------- JSX ----------
+
+
+return (
+  <section
+    id="chatbot"
+    ref={chatSectionRef}
+    className="mx-auto max-w-6xl px-4 py-10 md:py-14 border-t border-slate-800 animate-fadeInUp"
+  >
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-semibold mb-1 bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent heading-glow">
@@ -1474,7 +1288,7 @@ const ChatbotSection: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-slate-950/80 rounded-2xl shadow-xl border border-slate-800 flex flex-col h-[500px] backdrop-blur-xl">
+      <div className="bg-slate-950/80 rounded-2xl shadow-xl border border-slate-800 flex flex-col min-h-[420px] max-h-[65vh] md:h-[500px] backdrop-blur-xl">
         {/* header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/90 rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -1508,7 +1322,9 @@ const ChatbotSection: React.FC = () => {
                 : undefined;
 
             const isInfoShown =
-              !!schema && !!schema.info && hoveredInfoFeatureId === msg.featureId;
+              !!schema &&
+              !!schema.info &&
+              hoveredInfoFeatureId === msg.featureId;
 
             return (
               <div
@@ -1529,6 +1345,7 @@ const ChatbotSection: React.FC = () => {
                       const [firstLine, ...rest] = msg.text.split("\n");
                       return (
                         <div className="space-y-1">
+                          {/* question row + i icon */}
                           <div className="flex items-center gap-1">
                             <span className="leading-relaxed">
                               {firstLine}
@@ -1553,7 +1370,7 @@ const ChatbotSection: React.FC = () => {
                                 </span>
 
                                 {isInfoShown && (
-                                  <div className="absolute left-4 top-5 z-30 w-96 max-w-xl rounded-md bg-slate-900/95 p-3 text-[11px] text-slate-100 shadow-lg border border-slate-700 whitespace-pre-line max-h-48 overflow-y-auto">
+                                  <div className="absolute left-4 top-5 z-30 w-80 sm:w-96 max-w-xs sm:max-w-xl rounded-md bg-slate-900/95 p-3 text-[11px] text-slate-100 shadow-lg border border-slate-700 whitespace-pre-line max-h-48 overflow-y-auto">
                                     {schema.info}
                                   </div>
                                 )}
@@ -1561,6 +1378,7 @@ const ChatbotSection: React.FC = () => {
                             )}
                           </div>
 
+                          {/* remaining lines (options / helper text) */}
                           {rest.length > 0 && (
                             <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
                               {rest.join("\n")}
@@ -1639,5 +1457,3 @@ const ChatbotSection: React.FC = () => {
 };
 
 export default ChatbotSection;
-
-
