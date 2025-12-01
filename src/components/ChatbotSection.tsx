@@ -1,5 +1,5 @@
 // src/components/ChatbotSection.tsx
-// FINAL VERSION WITH MOBILE-FRIENDLY HEIGHT
+
 
 import React, { useEffect, useRef, useState } from "react";
 import { CHAT_API_URL, CHAT_API_KEY, OPENAI_API_KEY } from "../config";
@@ -96,6 +96,9 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     max: 100,
     unitHint: "years",
   },
+
+  
+
 
   // ---- Sex ----
   SEX_A: {
@@ -620,6 +623,8 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
 
 // ---------- OpenAI helper ----------
 
+
+
 const mentalHealthSystemPrompt = {
   role: "system" as const,
   content: `
@@ -669,6 +674,9 @@ async function callOpenAI(
     return "I'm having trouble connecting at the moment. Please try again in a bit.";
   }
 }
+
+
+
 
 // ---------- local helpers ----------
 
