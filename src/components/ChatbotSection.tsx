@@ -505,7 +505,7 @@ const featureSchemas: Record<FeatureId, FeatureSchema> = {
     label: "how refreshed you feel after sleep",
     type: "categorical",
     question:
-      "After you sleep, how refreshed do you usually feel? You can type the number or the phrase.",
+      "After your sleep, how refreshed do you usually feel? You can type the number or the phrase.",
     info:
       "Try to think about most days, not just one bad or good night:\n\n" +
       "• Not at all refreshed – You wake up exhausted or drained, like you hardly rested.\n" +
