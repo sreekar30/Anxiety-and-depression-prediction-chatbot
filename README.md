@@ -5,7 +5,7 @@ This is a Vite + React + TypeScript + Tailwind CSS project that shows:
 - An information section about anxiety and depression
 - A facts text carousel
 - One embedded Tableau dashboard (combined anxiety/depression view)
-- A chatbot section that calls your Hugging Face FastAPI endpoint
+- A chatbot section that calls your Hugging Face FastAPI endpoint.
 
 ## Getting started
 
